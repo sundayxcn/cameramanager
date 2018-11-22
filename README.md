@@ -3,7 +3,7 @@
 ## 注意事项
 1. 在有预览界面的activity使用rxpermission申请camera权限在部分手机上权限弹窗弹不出来
 2. camera的打开和释放跟着surfaceView走，不需要额外在onresume和onpause操作
-
+3. 第一次申请权限创建cameramanager后必须要手动opencamera，因为surface的create在之前已经走过了。
 ## 导入方式
 第一步：
 工程根目录中build.gradle中仓库地址增加maven jitpack
