@@ -33,16 +33,19 @@ dependencies {
     //预览图的仓库，已包含一个默认的仓库，可复写接口PreviewRepertory自定义
     private PreviewRepertory previewRepertory = new FacePreviewRepertory();
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
-    protected void onCreate( Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
         mSurfaceView = findViewById(R.id.surface_view);
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=0) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA);
-        }else{
-            cameraManager = new CameraManager.Builder(mSurfaceView,previewRepertory).build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != 0) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA);
+            }else {
+                cameraManager = new CameraManager.Builder(mSurfaceView, previewRepertory).build();
+            }
+        } else {
+            cameraManager = new CameraManager.Builder(mSurfaceView, previewRepertory).build();
         }
     }
 
@@ -50,14 +53,13 @@ dependencies {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         //super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if(permissions.length > 0){
-            for(String permission : permissions){
-                if(permission.equals(Manifest.permission.CAMERA)){
-                    cameraManager = new CameraManager.Builder(mSurfaceView,previewRepertory).build();
-                    //这里必须open
+        if (permissions.length > 0) {
+            for (String permission : permissions) {
+                if (permission.equals(Manifest.permission.CAMERA)) {
+                    cameraManager = new CameraManager.Builder(mSurfaceView, previewRepertory).build();
                     cameraManager.openCamera();
-                }else{
-                    Toast.makeText(CameraActivity.this,"没有权限",Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(CameraActivity.this, "没有权限", Toast.LENGTH_SHORT).show();
                     finish();
                 }
             }
