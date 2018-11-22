@@ -1,8 +1,8 @@
 # cameramanager
 用于快速接入camera预览
 ## 注意事项
-在有预览界面的activity使用rxpermission申请camera权限在部分手机上弹不出权限允许弹窗
-camera的打开和释放跟着surfaceView走，不需要额外在onresume和onpause操作
+1. 在有预览界面的activity使用rxpermission申请camera权限在部分手机上权限弹窗弹不出来
+2. camera的打开和释放跟着surfaceView走，不需要额外在onresume和onpause操作
 
 ## 导入方式
 第一步：
