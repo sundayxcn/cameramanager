@@ -319,7 +319,9 @@ public class CameraManager {
     public class CustomSurfaceHolderCallBack implements SurfaceHolder.Callback {
         @Override
         public void surfaceCreated(SurfaceHolder surfaceHolder) {
-            openCamera();
+            if(mSurfaceHolder != null) {
+                openCamera();
+            }
         }
 
         @Override

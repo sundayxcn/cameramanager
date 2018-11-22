@@ -47,6 +47,7 @@ public class CameraActivity extends FragmentActivity {
             for(String permission : permissions){
                 if(permission.equals(Manifest.permission.CAMERA)){
                     cameraManager = new CameraManager.Builder(mSurfaceView,previewRepertory).build();
+                    cameraManager.openCamera();
                 }else{
                     Toast.makeText(CameraActivity.this,"没有权限",Toast.LENGTH_SHORT).show();
                     finish();
