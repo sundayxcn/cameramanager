@@ -7,12 +7,15 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PaintFlagsDrawFilter;
 import android.hardware.Camera;
+import android.os.Build;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -157,8 +160,9 @@ public class CameraManager {
         }
     }
 
-    public void openCamera() {
+    public synchronized void openCamera() {
         initCamera(Camera.CameraInfo.CAMERA_FACING_FRONT);
+        startPreview();
         isCameraFront = true;
     }
 
@@ -167,16 +171,25 @@ public class CameraManager {
         mPreviewRepertory.clear();
     }
 
+    private boolean isPreviewing;
+    public void startPreview(){
+        if(!isPreviewing) {
+            mCamera.startPreview();
+        }
+        isPreviewing = true;
+    }
+
     public void autoFocus() {
         //mCamera.autoFocus(null);
     }
 
     //停止拍照并释放相机资源
-    private void stopCamera() {
+    private synchronized void stopCamera() {
         if (mCamera != null) {
             //停止预览
             mCamera.setPreviewCallback(null);
             mCamera.stopPreview();
+            isPreviewing = false;
             //释放相机资源
             mCamera.release();
             mCamera = null;
@@ -307,21 +320,15 @@ public class CameraManager {
         @Override
         public void surfaceCreated(SurfaceHolder surfaceHolder) {
             openCamera();
-            mCamera.startPreview();
         }
 
         @Override
         public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-            if (mCamera != null && surfaceHolder != null) {
-                //先停止后预览
-                mCamera.startPreview();
-            }
+            startPreview();
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-            //停止拍照
-            //surfaceHolder.removeCallback(this);
             stopCamera();
         }
     }
