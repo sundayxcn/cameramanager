@@ -4,7 +4,6 @@ import android.Manifest;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.view.SurfaceView;
@@ -31,6 +30,7 @@ public class CameraActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
         mSurfaceView = findViewById(R.id.surface_view);
+        mSurfaceView.setFocusable(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != 0) {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA);
@@ -42,7 +42,6 @@ public class CameraActivity extends FragmentActivity {
         }
     }
 
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         //super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -51,6 +50,7 @@ public class CameraActivity extends FragmentActivity {
                 if (permission.equals(Manifest.permission.CAMERA)) {
                     cameraManager = new CameraManager.Builder(mSurfaceView, previewRepertory).build();
                     cameraManager.openCamera();
+                    cameraManager.startPreview();
                 } else {
                     Toast.makeText(CameraActivity.this, "没有权限", Toast.LENGTH_SHORT).show();
                     finish();

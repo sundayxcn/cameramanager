@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.io.IOException;
 
 
 /**
@@ -27,6 +28,7 @@ import android.view.SurfaceView;
  * @data 2018/11/6
  **/
 public class CameraManager {
+    public static final String TAG = "CameraManager";
     private final int frameSkip;
     private final int degree;
     private Camera mCamera;
@@ -41,6 +43,7 @@ public class CameraManager {
     private long previewID = 0;
     private YUV2Bitmap yuv2Bitmap;
     private Camera.Parameters mParameters;
+    private boolean isPreviewing;
 
     private CameraManager(@NonNull SurfaceView surfaceView,
                           PreviewRepertory previewRepertory,
@@ -89,7 +92,6 @@ public class CameraManager {
         mPreviewRepertory = previewRepertory;
     }
 
-
     public void convertCamera() {
         if (isCameraFront) {
             initCamera(Camera.CameraInfo.CAMERA_FACING_BACK);
@@ -104,12 +106,21 @@ public class CameraManager {
     }
 
     public void initCamera(int cameraId) {
-        if (mCamera != null) {
+        try {
             stopCamera();
-        }
-        mCamera = Camera.open(cameraId);
-        if (mSurfaceHolder != null) {
-            setCameraSetting(mCamera, mSurfaceHolder);
+            mCamera = Camera.open(cameraId);
+            if (mSurfaceHolder != null) {
+                setCameraSetting(mCamera, mSurfaceHolder);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            if (mCamera != null) {
+                mCamera.release();
+                mCamera = null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            mCamera =null;
         }
 
     }
@@ -118,15 +129,14 @@ public class CameraManager {
         return mCamera;
     }
 
-    public void setCameraSetting(Camera camera, SurfaceHolder holder) {
-        try {
-            //摄像头设置SurfaceHolder对象，把摄像头与SurfaceHolder进行绑定
-            camera.setPreviewDisplay(holder);
+    public void setCameraSetting(Camera camera, SurfaceHolder holder) throws IOException {
+        //摄像头设置SurfaceHolder对象，把摄像头与SurfaceHolder进行绑定
+        camera.setPreviewDisplay(holder);
 
-            //调整系统相机拍照角度
-            camera.setDisplayOrientation(degree);
+        //调整系统相机拍照角度
+        camera.setDisplayOrientation(degree);
 
-            Camera.Parameters parameters = mParameters == null ? camera.getParameters() : mParameters;
+        Camera.Parameters parameters = mParameters == null ? camera.getParameters() : mParameters;
 //            List<String> focusModes = parameters.getSupportedFocusModes();
 //            if(focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
 //                parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
@@ -138,42 +148,48 @@ public class CameraManager {
 //                    }
 //                });
 //            }
-            int width = parameters.getPreviewSize().width;
-            int height = parameters.getPreviewSize().height;
+        int width = parameters.getPreviewSize().width;
+        int height = parameters.getPreviewSize().height;
 //            List<Camera.Size> list = camera.getParameters().getSupportedPreviewSizes();
 //            //设置帧数的
 //            parameters.setPreviewSize(320,240);
-            camera.setParameters(parameters);
+        camera.setParameters(parameters);
 //            //设置获取帧数回调
 
-            int size = width * height * 3 / 2;
-            camera.addCallbackBuffer(new byte[size]);
-            camera.setPreviewCallbackWithBuffer(mCustomPreviewCB);
-            camera.setPreviewCallback(mCustomPreviewCB);
-
-        } catch (Exception e) {
-
-            if (camera != null) {
-                camera.release();
-            }
-            e.printStackTrace();
-        }
+        int size = width * height * 3 / 2;
+        camera.addCallbackBuffer(new byte[size]);
+        camera.setPreviewCallbackWithBuffer(mCustomPreviewCB);
+        camera.setPreviewCallback(mCustomPreviewCB);
     }
 
     public synchronized void openCamera() {
-        initCamera(Camera.CameraInfo.CAMERA_FACING_FRONT);
-        startPreview();
-        isCameraFront = true;
+        int num = Camera.getNumberOfCameras();
+        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        int targetId = Camera.CameraInfo.CAMERA_FACING_BACK;
+        for (int i = 0; i < num; i++) {
+            Camera.getCameraInfo(i, cameraInfo);
+            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                targetId = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                isCameraFront = true;
+            }
+        }
+        initCamera(targetId);
+
     }
 
     public void closeCamera() {
-        stopCamera();
-        mPreviewRepertory.clear();
+        try {
+            stopCamera();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            mPreviewRepertory.clear();
+        }
+
     }
 
-    private boolean isPreviewing;
-    public void startPreview(){
-        if(!isPreviewing) {
+    public void startPreview() {
+        if (!isPreviewing && mCamera != null) {
             mCamera.startPreview();
         }
         isPreviewing = true;
@@ -184,12 +200,13 @@ public class CameraManager {
     }
 
     //停止拍照并释放相机资源
-    private synchronized void stopCamera() {
+    private synchronized void stopCamera() throws IOException {
         if (mCamera != null) {
             //停止预览
-            mCamera.setPreviewCallback(null);
-            mCamera.stopPreview();
             isPreviewing = false;
+            mCamera.setPreviewCallback(null);
+            mCamera.setPreviewDisplay(null);
+            mCamera.stopPreview();
             //释放相机资源
             mCamera.release();
             mCamera = null;
@@ -295,10 +312,12 @@ public class CameraManager {
 
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
-            if (mPreviewRepertory != null) {
+            if (isPreviewing && mPreviewRepertory != null) {
                 previewID++;
                 if (previewID % frameSkip == 0) {
-                    camera.addCallbackBuffer(data);
+                    if(camera != null) {
+                        camera.addCallbackBuffer(data);
+                    }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
                     Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
@@ -317,22 +336,56 @@ public class CameraManager {
     }
 
     public class CustomSurfaceHolderCallBack implements SurfaceHolder.Callback {
-        @Override
-        public void surfaceCreated(SurfaceHolder surfaceHolder) {
-            if(mSurfaceHolder != null) {
-                openCamera();
-            }
-        }
+
 
         @Override
-        public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-            startPreview();
+        public void surfaceCreated(SurfaceHolder holder) {
+            Log.d(TAG, "Start preview display[SURFACE-CREATED]");
+            checkCamera();
+            //startPreviewDisplay(holder);
+        }
+
+
+        @Override
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Log.d(TAG, "Restart preview display[SURFACE-CHANGED]");
+            stopPreviewDisplay();
+            startPreviewDisplay(holder);
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-            stopCamera();
+            closeCamera();
         }
+
+        private void stopPreviewDisplay() {
+            checkCamera();
+            try {
+                stopPreview();
+            } catch (Exception e) {
+                Log.e(TAG, "Error while STOP preview for camera", e);
+            }
+        }
+
+        private void startPreviewDisplay(SurfaceHolder holder) {
+            checkCamera();
+            try {
+                if(mCamera != null) {
+                    mCamera.setPreviewDisplay(holder);
+                    startPreview();
+                }
+            } catch (IOException e) {
+                Log.e("sunday", "Error while START preview for camera", e);
+            }
+        }
+
+        private void checkCamera() {
+            if (mCamera == null) {
+                Log.e(TAG,"Camera must be set when start/stop preview, call <setCamera(Camera)> to set");
+                openCamera();
+            }
+        }
+
     }
 
 

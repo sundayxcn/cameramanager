@@ -3,8 +3,14 @@
     package="sunday.sdk.camerademo">
 
 
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="true" />
 
-    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -13,9 +19,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity"
-            android:screenOrientation="portrait"
-            >
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -23,9 +29,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".CameraActivity"
-            android:screenOrientation="portrait"
-            />
+        <activity
+            android:name=".CameraActivity"
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>
