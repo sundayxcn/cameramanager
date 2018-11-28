@@ -21,7 +21,7 @@ allprojects {
 模块build.gradle中引入
 ```
 dependencies {
-   implementation 'com.github.sundayxcn:cameramanager:1.4'
+   implementation 'com.github.sundayxcn:cameramanager:1.5'
 }
 
 ```
