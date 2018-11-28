@@ -372,6 +372,7 @@ public class CameraManager {
             try {
                 if(mCamera != null) {
                     mCamera.setPreviewDisplay(holder);
+                    mCamera.setPreviewCallback(mCustomPreviewCB);
                     startPreview();
                 }
             } catch (IOException e) {
