@@ -3,23 +3,25 @@ package sunday.sdk.camera;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PaintFlagsDrawFilter;
 import android.hardware.Camera;
-import android.os.Build;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
 import android.util.Log;
+import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import java.io.IOException;
+import java.util.List;
 
 
 /**
@@ -44,6 +46,8 @@ public class CameraManager {
     private YUV2Bitmap yuv2Bitmap;
     private Camera.Parameters mParameters;
     private boolean isPreviewing;
+    private PictureBitmapCallback mPictureBitmapCallback;
+    private boolean isBitmapScaleForce;
 
     private CameraManager(@NonNull SurfaceView surfaceView,
                           PreviewRepertory previewRepertory,
@@ -65,27 +69,59 @@ public class CameraManager {
         mTargetHeight = targetHeight;
         this.frameSkip = frameSkip;
 
-
     }
 
-    public static Bitmap resizeBitmap(Bitmap bitmap, int widthNew, int heightNew) {
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
-        float scaleWidth = widthNew * 1f / width;
-        float scaleHeight = heightNew * 1f / height;
+    public void takePicture(final PictureBitmapCallback pictureCallback) {
+        mPictureBitmapCallback = pictureCallback;
+        isPreviewing = false;
+        mCamera.takePicture(null, null, new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                int width = camera.getParameters().getPictureSize().width;
+                int height = camera.getParameters().getPictureSize().height;
+                Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                bitmap = resizeBitmap(bitmap, width, height);
+                mPictureBitmapCallback.takeBitmap(bitmap);
+            }
+        });
+    }
 
-        //
-        Bitmap resizedBitmap = Bitmap.createBitmap(widthNew, heightNew, bitmap.getConfig());
-        Canvas canvas = new Canvas(resizedBitmap);
-        canvas.save();
-        canvas.scale(scaleWidth, scaleHeight);
-        canvas.setDrawFilter(new PaintFlagsDrawFilter(0, Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG));
 
-        //
-        canvas.drawBitmap(bitmap, 0, 0, null);
-        canvas.restore();
+    public Bitmap resizeBitmap(
+            Bitmap bitmap,
+            int width,
+            int height) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(360 - degree);
+        if (isCameraFront) {
+            //镜像
+            matrix.postScale(-1, 1);
+        }
+        float scaleX = 1f;
+        float scaleY = 1f;
+        if (degree == 90 || degree == 180) {
+            scaleX = (float) mTargetWidth / (float) height;
+            scaleY = (float) mTargetHeight / (float) width;
+        } else {
+            scaleX = (float) mTargetWidth / (float) width;
+            scaleY = (float) mTargetHeight / (float) height;
+        }
 
-        return resizedBitmap;
+        if (isBitmapScaleForce) {
+            matrix.postScale(scaleX, scaleY);
+        } else {
+            float scale = scaleX < scaleY ? scaleX : scaleY;
+            matrix.postScale(scale, scale);
+        }
+        bitmap = Bitmap.createBitmap(
+                bitmap,
+                0,
+                0,
+                width,
+                height,
+                matrix,
+                true);
+        return bitmap;
     }
 
     public void setPreviewRepertory(PreviewRepertory previewRepertory) {
@@ -120,7 +156,7 @@ public class CameraManager {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            mCamera =null;
+            mCamera = null;
         }
 
     }
@@ -137,17 +173,16 @@ public class CameraManager {
         camera.setDisplayOrientation(degree);
 
         Camera.Parameters parameters = mParameters == null ? camera.getParameters() : mParameters;
-//            List<String> focusModes = parameters.getSupportedFocusModes();
-//            if(focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
-//                parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-//            }else if(focusModes.contains(Camera.Parameters.FOCUS_MODE_FIXED)){
-//                camera.autoFocus(new Camera.AutoFocusCallback() {
-//                    @Override
-//                    public void onAutoFocus(boolean success, Camera camera) {
-//
-//                    }
-//                });
-//            }
+        List<Camera.Size> list = camera.getParameters().getSupportedPictureSizes();
+        int length = list.size();
+        Camera.Size pictureSize = list.get(length - 3);
+        for (Camera.Size size : list) {
+            if (size.width == mTargetWidth && size.height == mTargetHeight) {
+                pictureSize.width = mTargetWidth;
+                pictureSize.height = mTargetHeight;
+            }
+        }
+        parameters.setPictureSize(pictureSize.width, pictureSize.height);
         int width = parameters.getPreviewSize().width;
         int height = parameters.getPreviewSize().height;
 //            List<Camera.Size> list = camera.getParameters().getSupportedPreviewSizes();
@@ -182,7 +217,7 @@ public class CameraManager {
             stopCamera();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             mPreviewRepertory.clear();
         }
 
@@ -222,6 +257,17 @@ public class CameraManager {
         }
     }
 
+    public boolean isBitmapScaleForce() {
+        return isBitmapScaleForce;
+    }
+
+    public void setBitmapScaleForce(Boolean force) {
+        isBitmapScaleForce = force;
+    }
+
+    public interface PictureBitmapCallback {
+        void takeBitmap(Bitmap bitmap);
+    }
 
     public static class Builder {
         private int degree = 90;
@@ -264,7 +310,9 @@ public class CameraManager {
          * @param frame 每几帧跳一帧，根据实际情况来设定，默认为2，两帧取一帧
          */
         public Builder frameSkip(int frame) {
-            this.frameSkip = frame;
+            if (frame > 0) {
+                this.frameSkip = frame;
+            }
             return this;
         }
 
@@ -315,19 +363,13 @@ public class CameraManager {
             if (isPreviewing && mPreviewRepertory != null) {
                 previewID++;
                 if (previewID % frameSkip == 0) {
-                    if(camera != null) {
+                    if (camera != null) {
                         camera.addCallbackBuffer(data);
                     }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
                     Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
-                    if (width != mTargetWidth || height != mTargetHeight) {
-                        if (degree == 90 || degree == 180) {
-                            bitmap = resizeBitmap(bitmap, mTargetHeight, mTargetWidth);
-                        } else {
-                            bitmap = resizeBitmap(bitmap, mTargetWidth, mTargetHeight);
-                        }
-                    }
+                    bitmap = resizeBitmap(bitmap, width, height);
                     Preview preview = new Preview(previewID, bitmap);
                     mPreviewRepertory.addPreview(preview);
                 }
@@ -370,7 +412,7 @@ public class CameraManager {
         private void startPreviewDisplay(SurfaceHolder holder) {
             checkCamera();
             try {
-                if(mCamera != null) {
+                if (mCamera != null) {
                     mCamera.setPreviewDisplay(holder);
                     mCamera.setPreviewCallback(mCustomPreviewCB);
                     startPreview();
@@ -382,12 +424,10 @@ public class CameraManager {
 
         private void checkCamera() {
             if (mCamera == null) {
-                Log.e(TAG,"Camera must be set when start/stop preview, call <setCamera(Camera)> to set");
+                Log.w(TAG, "mCamera == null,Camera must be set when start/stop preview");
                 openCamera();
             }
         }
 
     }
-
-
 }
