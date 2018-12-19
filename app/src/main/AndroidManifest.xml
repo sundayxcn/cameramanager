@@ -30,7 +30,7 @@
         </activity>
 
         <activity
-            android:name=".CameraActivity"
+            android:name="sunday.sdk.cameraui.CameraUIActivity"
             android:screenOrientation="portrait" />
     </application>
 
