@@ -55,7 +55,8 @@ public class CameraManager {
                           int degree,
                           int targetWidth,
                           int targetHeight,
-                          int frameSkip) {
+                          int frameSkip,
+                          boolean isBitmapScaleForce) {
         mContext = surfaceView.getContext();
         yuv2Bitmap = new YUV2Bitmap(mContext);
         mSurfaceHolder = surfaceView.getHolder();
@@ -63,7 +64,7 @@ public class CameraManager {
         this.mParameters = parameters;
         mSurfaceHolderCB = new CustomSurfaceHolderCallBack();
         mSurfaceHolder.addCallback(mSurfaceHolderCB);
-
+        this.isBitmapScaleForce = isBitmapScaleForce;
         this.degree = degree;
         mTargetWidth = targetWidth;
         mTargetHeight = targetHeight;
@@ -274,6 +275,7 @@ public class CameraManager {
         private int targetWidth = 240;
         private int targetHeight = 320;
         private int frameSkip = 2;
+        private boolean isBitmapScaleForce;
         private SurfaceView surfaceView;
         private Camera.Parameters parameters;
         private PreviewRepertory previewRepertory;
@@ -316,6 +318,16 @@ public class CameraManager {
             return this;
         }
 
+        /**
+         * @param force 如果目标的宽高和camera输出的宽高不成比例，
+         *              true则强制缩放
+         *              false则按照最小比例缩放，默认为false
+         * */
+        public Builder BitmapScaleForce(boolean force){
+            isBitmapScaleForce = force;
+            return this;
+        }
+
         public CameraManager build() {
             return new CameraManager(
                     surfaceView,
@@ -324,7 +336,8 @@ public class CameraManager {
                     degree,
                     targetWidth,
                     targetHeight,
-                    frameSkip);
+                    frameSkip,
+                    isBitmapScaleForce);
         }
     }
 

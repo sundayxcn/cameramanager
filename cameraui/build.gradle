@@ -19,9 +19,21 @@ android {
 
 }
 
+task aarRelease(type:Copy){
+    def rootPath = rootProject.rootDir.path
+    def buildPath = rootPath + "/cameraui/build/outputs/aar"
+    def intoPath = rootPath + "/app/libs"
+    // 执行编译AAR脚本（原生脚本）
+    dependsOn 'assembleRelease'
+    from buildPath
+    into intoPath
+}
+
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.github.sundayxcn:cameramanager:1.6'
+    //implementation 'com.github.sundayxcn:cameramanager:1.6'
+    implementation project(path: ':camera')
     api 'com.android.support:appcompat-v7:28.0.0'
 
 }

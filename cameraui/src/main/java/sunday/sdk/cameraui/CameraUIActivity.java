@@ -45,11 +45,11 @@ public abstract class CameraUIActivity extends FragmentActivity {
     private ImageView mTakePicView;
     private ImageView mConvertCameraView;
     private ImageView mAlbumShowView;
-    private CameraManager mCameraManager;
+    protected CameraManager mCameraManager;
     private ViewGroup mTakeSelect;
     private Button mTakeCancel;
     private Button mTakeFinish;
-    private PreviewRepertory previewRepertory = new FacePreviewRepertory();
+    protected PreviewRepertory previewRepertory = new FacePreviewRepertory();
     private Size mTargetSize;
     private Bitmap mBitmap;
     @Override
