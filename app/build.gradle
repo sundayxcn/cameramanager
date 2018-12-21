@@ -34,7 +34,7 @@ dependencies {
 
 
     //快速接入-不包含UI
-    implementation 'com.github.sundayxcn:cameramanager:1.6'
+    implementation 'com.github.sundayxcn:cameramanager:1.9'
     //快速接入-包含UI
     //implementation 'com.github.sundayxcn:cameramanager:ui-SNAPSHOT'
     //implementation project(path: ':cameraui')

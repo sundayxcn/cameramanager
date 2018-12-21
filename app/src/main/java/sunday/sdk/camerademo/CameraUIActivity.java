@@ -70,6 +70,16 @@ public abstract class CameraUIActivity extends FragmentActivity {
     }
 
 
+
+    private CameraManager generatorCameraManager(){
+        return new CameraManager.Builder(mSurfaceView, previewRepertory).
+                targetWidthHeight(mTargetSize.getWidth(), mTargetSize.getHeight()).
+                frameSkip(2).
+                BitmapScaleForce(true).
+                displayOrientation(90).
+                build();
+    }
+
     protected Size getTargetSize(){
         return new Size(480,640);
     }
@@ -182,14 +192,6 @@ public abstract class CameraUIActivity extends FragmentActivity {
             showBitmap(bitmap);
         }
     }
-
-    private CameraManager generatorCameraManager(){
-        return new CameraManager.Builder(mSurfaceView, previewRepertory).
-                targetWidthHeight(mTargetSize.getWidth(), mTargetSize.getHeight()).
-                build();
-    }
-
-
 
     private Bitmap decodeUri(Uri uri) {
         Bitmap bitmap;
