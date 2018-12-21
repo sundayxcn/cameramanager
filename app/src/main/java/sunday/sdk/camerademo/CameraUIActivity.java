@@ -1,4 +1,4 @@
-package sunday.sdk.cameraui;
+package sunday.sdk.camerademo;
 
 import android.Manifest;
 import android.app.Activity;

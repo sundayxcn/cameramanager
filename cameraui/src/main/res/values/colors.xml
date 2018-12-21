@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!--字体通用白色-->
-    <color name="common_white">#ffffff</color>
-    <color name="common_black">#ff000000</color>
-    <!--相机底部背景颜色-->
-    <color name="color_camera_buttom">#323232</color>
-</resources>

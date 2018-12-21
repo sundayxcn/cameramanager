@@ -1,5 +1,0 @@
-<resources>
-    <string name="app_name">cameraui</string>
-    <string name="txt_cancel">取消</string>
-    <string name="txt_choose_pic_album">直接从相册选择</string>
-</resources>
