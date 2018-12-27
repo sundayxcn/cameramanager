@@ -13,9 +13,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Size;
+import android.view.LayoutInflater;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -52,10 +54,12 @@ public abstract class CameraUIActivity extends FragmentActivity {
     protected PreviewRepertory previewRepertory = new FacePreviewRepertory();
     private Size mTargetSize;
     private Bitmap mBitmap;
+    private ConstraintLayout mParentView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera);
+        mParentView = (ConstraintLayout) LayoutInflater.from(this).inflate(R.layout.activity_camera,null,false);
+        setContentView(mParentView);
         mTargetSize = getTargetSize();
         setupViews();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -67,6 +71,14 @@ public abstract class CameraUIActivity extends FragmentActivity {
         } else {
             mCameraManager = generatorCameraManager();
         }
+    }
+
+
+    public ConstraintLayout getParentView(){
+        return mParentView;
+    }
+
+    public void resetUI(){
     }
 
 
@@ -89,6 +101,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
             @Override
             public void onClick(View v) {
                 hideBitmap();
+                resetUI();
             }
         });
         mTakeFinish = mTakeSelect.findViewById(R.id.take_finish);
@@ -123,6 +136,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
             @Override
             public void onClick(View v) {
                 //takeCancel();
+
                 finish();
             }
         });
