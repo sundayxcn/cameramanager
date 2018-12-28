@@ -135,6 +135,7 @@ public class CameraManager {
         } else {
             initCamera(Camera.CameraInfo.CAMERA_FACING_FRONT);
         }
+        startPreview();
         isCameraFront = !isCameraFront;
     }
 
@@ -236,13 +237,14 @@ public class CameraManager {
     }
 
     //停止拍照并释放相机资源
-    private synchronized void stopCamera() throws IOException {
+    private void stopCamera() throws IOException {
         if (mCamera != null) {
             //停止预览
             isPreviewing = false;
+            stopPreview();
             mCamera.setPreviewCallback(null);
             mCamera.setPreviewDisplay(null);
-            mCamera.stopPreview();
+
             //释放相机资源
             mCamera.release();
             mCamera = null;
@@ -252,6 +254,7 @@ public class CameraManager {
 
 
     private void stopPreview() {
+        isPreviewing = false;
         if (mCamera != null) {
             mCamera.setPreviewCallback(null);
             mCamera.stopPreview();
