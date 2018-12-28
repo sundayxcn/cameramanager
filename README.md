@@ -22,7 +22,7 @@ allprojects {
 模块build.gradle中引入
 ```
 dependencies {
-   implementation 'com.github.sundayxcn:cameramanager:1.9'
+   implementation 'com.github.sundayxcn:cameramanager:1.10'
 }
 
 ```
