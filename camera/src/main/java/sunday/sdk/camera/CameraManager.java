@@ -228,6 +228,11 @@ public class CameraManager {
     public void startPreview() {
         if (!isPreviewing && mCamera != null) {
             mCamera.setPreviewCallback(mCustomPreviewCB);
+            try {
+                mCamera.setPreviewDisplay(mSurfaceHolder);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             mCamera.startPreview();
         }
         isPreviewing = true;
