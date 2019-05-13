@@ -227,6 +227,7 @@ public class CameraManager {
 
     public void startPreview() {
         if (!isPreviewing && mCamera != null) {
+            mCamera.setPreviewCallback(mCustomPreviewCB);
             mCamera.startPreview();
         }
         isPreviewing = true;

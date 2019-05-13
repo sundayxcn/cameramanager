@@ -31,6 +31,7 @@ import java.io.IOException;
 
 import sunday.sdk.camera.CameraManager;
 import sunday.sdk.camera.FacePreviewRepertory;
+import sunday.sdk.camera.Preview;
 import sunday.sdk.camera.PreviewRepertory;
 import sunday.sdk.utils.BitmapUtil;
 import sunday.sdk.utils.FileUtil;
@@ -150,9 +151,15 @@ public abstract class CameraUIActivity extends FragmentActivity {
         mTakePicView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Bitmap bitmap = previewRepertory.getLastPreview().getBitmap();
-                mBitmap = bitmap;
-                showBitmap(bitmap);
+
+                Preview preview = previewRepertory.getLastPreview();
+                if(preview == null){
+                    Toast.makeText(CameraUIActivity.this,"仓库已空，请稍等",Toast.LENGTH_SHORT).show();
+                }else {
+                    Bitmap bitmap = preview.getBitmap();
+                    mBitmap = bitmap;
+                    showBitmap(bitmap);
+                }
             }
         });
         mConvertCameraView = findViewById(R.id.iv_convert_camera);
