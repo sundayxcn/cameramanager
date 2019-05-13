@@ -253,7 +253,7 @@ public class CameraManager {
     }
 
 
-    private void stopPreview() {
+    public void stopPreview() {
         isPreviewing = false;
         if (mCamera != null) {
             mCamera.setPreviewCallback(null);

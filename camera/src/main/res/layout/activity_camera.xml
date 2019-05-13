@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    >
+    android:layout_height="match_parent">
 
     <SurfaceView
         android:id="@+id/surface_view"
@@ -12,12 +11,12 @@
         android:layout_height="match_parent" />
 
     <ImageView
-        android:background="#123456"
         android:id="@+id/album_view"
-        android:visibility="gone"
-        android:scaleType="center"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:background="#123456"
+        android:scaleType="center"
+        android:visibility="gone" />
 
 
     <View
@@ -87,38 +86,67 @@
         app:layout_constraintRight_toRightOf="parent" />
 
 
-    <RelativeLayout
+    <LinearLayout
+        android:visibility="gone"
         android:id="@+id/take_pic_select"
         android:layout_width="match_parent"
         android:layout_height="110dp"
         android:background="@color/color_camera_buttom"
-        android:visibility="gone"
+        android:gravity="center"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
             android:id="@+id/take_cancel"
-            android:layout_width="80dp"
+            android:layout_width="0dp"
             android:layout_height="60dp"
-            android:layout_centerVertical="true"
-            android:layout_marginLeft="52dp"
+            android:layout_weight="1"
             android:background="#123456"
             android:text="重拍"
             android:textColor="@color/common_white"
             android:textSize="14dp" />
 
+        <View
+            android:layout_width="5dp"
+            android:layout_height="5dp" />
+
+        <Button
+            android:id="@+id/take_rotate"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="#123456"
+            android:text="旋转"
+            android:textColor="@color/common_white" />
+
+        <View
+            android:layout_width="5dp"
+            android:layout_height="5dp" />
+
+        <Button
+            android:id="@+id/take_save"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:background="#123456"
+            android:text="保存"
+            android:textColor="@color/common_white" />
+
+        <View
+            android:layout_width="5dp"
+            android:layout_height="5dp" />
+
         <Button
             android:id="@+id/take_finish"
-            android:layout_width="80dp"
+            android:layout_width="0dp"
             android:layout_height="60dp"
-            android:layout_alignParentRight="true"
-            android:layout_centerVertical="true"
-            android:layout_marginRight="52dp"
+            android:layout_weight="1"
             android:background="#123456"
             android:text="确定"
             android:textColor="@color/common_white"
             android:textSize="14dp" />
 
-    </RelativeLayout>
+    </LinearLayout>
 
 
 </android.support.constraint.ConstraintLayout>

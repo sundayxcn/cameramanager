@@ -27,10 +27,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import sunday.sdk.camera.CameraManager;
 import sunday.sdk.camera.FacePreviewRepertory;
 import sunday.sdk.camera.PreviewRepertory;
+import sunday.sdk.utils.BitmapUtil;
+import sunday.sdk.utils.FileUtil;
 
 
 /**
@@ -41,6 +44,12 @@ import sunday.sdk.camera.PreviewRepertory;
 public abstract class CameraUIActivity extends FragmentActivity {
     public static final int REQUEST_CODE_CAMERA = 999;
     public static final int REQUEST_CODE_ABLUM = 998;
+    public static final String[] PERMISSIONS = new String[]{
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+    };
+
     private SurfaceView mSurfaceView;
     private TextView mAlbumView;
     private TextView mCancelView;
@@ -50,7 +59,9 @@ public abstract class CameraUIActivity extends FragmentActivity {
     protected CameraManager mCameraManager;
     private ViewGroup mTakeSelect;
     private Button mTakeCancel;
+    private Button mTakeSave;
     private Button mTakeFinish;
+    private Button mTakeRotate;
     protected PreviewRepertory previewRepertory = new FacePreviewRepertory();
     private Size mTargetSize;
     private Bitmap mBitmap;
@@ -63,8 +74,11 @@ public abstract class CameraUIActivity extends FragmentActivity {
         mTargetSize = getTargetSize();
         setupViews();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != 0) {
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_CAMERA);
+            if (ContextCompat.checkSelfPermission(this, PERMISSIONS[0]) != 0 ||
+                    ContextCompat.checkSelfPermission(this, PERMISSIONS[1]) != 0||
+                    ContextCompat.checkSelfPermission(this, PERMISSIONS[2]) != 0
+                    ) {
+                requestPermissions(PERMISSIONS, REQUEST_CODE_CAMERA);
             }else {
                 mCameraManager = generatorCameraManager();
             }
@@ -91,6 +105,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
     protected abstract void takeFinish(Bitmap bitmap);
     //protected abstract void takeCancel();
 
+
     private void setupViews(){
         mSurfaceView = findViewById(R.id.surface_view);
         mSurfaceView.setFocusable(true);
@@ -104,6 +119,27 @@ public abstract class CameraUIActivity extends FragmentActivity {
                 resetUI();
             }
         });
+        mTakeRotate = findViewById(R.id.take_rotate);
+        mTakeRotate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mBitmap = BitmapUtil.rotateBitmap(mBitmap,90);
+                mAlbumShowView.setImageBitmap(mBitmap);
+            }
+        });
+        mTakeSave = findViewById(R.id.take_save);
+        mTakeSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    FileUtil.writeBitmap(mBitmap);
+                    showTips("文件已保存到根目录face_check中");
+                } catch (IOException e) {
+                    showTips("保存出错 errorMsg="+ e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        });
         mTakeFinish = mTakeSelect.findViewById(R.id.take_finish);
         mTakeFinish.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,13 +151,8 @@ public abstract class CameraUIActivity extends FragmentActivity {
             @Override
             public void onClick(View v) {
                 Bitmap bitmap = previewRepertory.getLastPreview().getBitmap();
+                mBitmap = bitmap;
                 showBitmap(bitmap);
-//                mCameraManager.takePicture(new CameraManager.PictureBitmapCallback() {
-//                    @Override
-//                    public void takeBitmap(Bitmap bitmap) {
-//                        showBitmap(bitmap);
-//                    }
-//                });
             }
         });
         mConvertCameraView = findViewById(R.id.iv_convert_camera);
@@ -156,15 +187,15 @@ public abstract class CameraUIActivity extends FragmentActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         //super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (permissions.length > 0) {
-            for (String permission : permissions) {
-                if (permission.equals(Manifest.permission.CAMERA)) {
-                    mCameraManager = generatorCameraManager();
-                    mCameraManager.openCamera();
-                    mCameraManager.startPreview();
-                } else {
-                    Toast.makeText(CameraUIActivity.this, "没有权限", Toast.LENGTH_SHORT).show();
-                    finish();
+            for(int i = 0 ; i < permissions.length ;i++){
+                if(grantResults[i] == 0){
+                    if(permissions[i].equals(Manifest.permission.CAMERA)){
+                        mCameraManager = generatorCameraManager();
+                        mCameraManager.openCamera();
+                        mCameraManager.startPreview();
+                    }
                 }
+
             }
         }
     }
@@ -172,16 +203,25 @@ public abstract class CameraUIActivity extends FragmentActivity {
 
 
     public void showBitmap(@NonNull Bitmap bitmap){
-        mBitmap = bitmap;
         mTakeSelect.setVisibility(View.VISIBLE);
+
         mAlbumShowView.setVisibility(View.VISIBLE);
         mAlbumShowView.setImageBitmap(bitmap);
+
+        mAlbumView.setVisibility(View.GONE);
+
+        mCameraManager.stopPreview();
     }
 
 
     public void hideBitmap(){
         mTakeSelect.setVisibility(View.GONE);
+
         mAlbumShowView.setVisibility(View.GONE);
+
+        mAlbumView.setVisibility(View.VISIBLE);
+
+
         mCameraManager.startPreview();
     }
 
@@ -193,6 +233,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
                 resultCode == Activity.RESULT_OK &&
                 data != null){
             Bitmap bitmap = decodeUri(data.getData());
+            mBitmap = bitmap;
             showBitmap(bitmap);
         }
     }
@@ -259,6 +300,11 @@ public abstract class CameraUIActivity extends FragmentActivity {
         }
 
         return bitmap;
+    }
+
+
+    private void showTips(String message){
+        Toast.makeText(this,message,Toast.LENGTH_SHORT).show();
     }
 
 
