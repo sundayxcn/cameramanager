@@ -5,10 +5,14 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PaintFlagsDrawFilter;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.os.Build;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -16,10 +20,10 @@ import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
 import android.util.Log;
-import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -58,7 +62,7 @@ public class CameraManager {
                           int frameSkip,
                           boolean isBitmapScaleForce) {
         mContext = surfaceView.getContext();
-        yuv2Bitmap = new YUV2Bitmap(mContext);
+        //yuv2Bitmap = new YUV2Bitmap(mContext);
         mSurfaceHolder = surfaceView.getHolder();
         mPreviewRepertory = previewRepertory;
         this.mParameters = parameters;
@@ -390,10 +394,27 @@ public class CameraManager {
                     }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
-                    Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
-                    bitmap = resizeBitmap(bitmap, width, height);
-                    Preview preview = new Preview(previewID, bitmap);
-                    mPreviewRepertory.addPreview(preview);
+                    int sdk = Build.VERSION.SDK_INT;
+                    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+                        Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
+                        Preview preview = new Preview(previewID, bitmap);
+                        mPreviewRepertory.addPreview(preview);
+                    }else {
+                        try {
+                            YuvImage img = new YuvImage(data, ImageFormat.NV21, width, height, null);
+                            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            img.compressToJpeg(new Rect(0, 0, width, height), 100, stream);
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
+                            bitmap = resizeBitmap(bitmap, width, height);
+                            stream.close();
+                            Preview preview = new Preview(previewID, bitmap);
+                            mPreviewRepertory.addPreview(preview);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+
                 }
             }
         }
