@@ -62,7 +62,7 @@ public class CameraManager {
                           int frameSkip,
                           boolean isBitmapScaleForce) {
         mContext = surfaceView.getContext();
-        //yuv2Bitmap = new YUV2Bitmap(mContext);
+        yuv2Bitmap = new YUV2Bitmap(mContext);
         mSurfaceHolder = surfaceView.getHolder();
         mPreviewRepertory = previewRepertory;
         this.mParameters = parameters;
@@ -394,7 +394,6 @@ public class CameraManager {
                     }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
-                    int sdk = Build.VERSION.SDK_INT;
                     if(Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
                         Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
                         Preview preview = new Preview(previewID, bitmap);
