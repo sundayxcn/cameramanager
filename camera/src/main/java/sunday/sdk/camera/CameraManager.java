@@ -396,6 +396,7 @@ public class CameraManager {
                     int height = camera.getParameters().getPreviewSize().height;
                     if(Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
                         Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
+                        bitmap = resizeBitmap(bitmap, width, height);
                         Preview preview = new Preview(previewID, bitmap);
                         mPreviewRepertory.addPreview(preview);
                     }else {
