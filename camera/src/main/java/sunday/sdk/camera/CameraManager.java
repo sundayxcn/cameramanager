@@ -19,6 +19,7 @@ import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -62,7 +63,7 @@ public class CameraManager {
                           int frameSkip,
                           boolean isBitmapScaleForce) {
         mContext = surfaceView.getContext();
-        yuv2Bitmap = new YUV2Bitmap(mContext);
+        //yuv2Bitmap = new YUV2Bitmap(mContext);
         mSurfaceHolder = surfaceView.getHolder();
         mPreviewRepertory = previewRepertory;
         this.mParameters = parameters;
@@ -201,6 +202,8 @@ public class CameraManager {
         camera.addCallbackBuffer(new byte[size]);
         camera.setPreviewCallbackWithBuffer(mCustomPreviewCB);
         camera.setPreviewCallback(mCustomPreviewCB);
+
+        yuv2Bitmap = new YUV2Bitmap(mContext);
     }
 
     public synchronized void openCamera() {
@@ -258,6 +261,9 @@ public class CameraManager {
             //释放相机资源
             mCamera.release();
             mCamera = null;
+
+            yuv2Bitmap = null;
+
         }
 
     }
@@ -365,6 +371,7 @@ public class CameraManager {
             renderScript = RenderScript.create(context);
             scriptIntrinsicYuvToRGB = ScriptIntrinsicYuvToRGB.create(renderScript, Element.U8_4(renderScript));
         }
+
 
         public Bitmap nv21ToBitmap(byte[] nv21, int width, int height) {
             if (yuvType == null) {
