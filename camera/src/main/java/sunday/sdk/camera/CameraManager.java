@@ -4,22 +4,20 @@ package sunday.sdk.camera;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PaintFlagsDrawFilter;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -38,6 +36,7 @@ public class CameraManager {
     public static final String TAG = "CameraManager";
     private final int frameSkip;
     private final int degree;
+    private int autoFocusInterval = 5000;
     private Camera mCamera;
     private boolean isCameraFront;
     private SurfaceHolder mSurfaceHolder;
@@ -53,27 +52,33 @@ public class CameraManager {
     private boolean isPreviewing;
     private PictureBitmapCallback mPictureBitmapCallback;
     private boolean isBitmapScaleForce;
-
-    private CameraManager(@NonNull SurfaceView surfaceView,
-                          PreviewRepertory previewRepertory,
-                          Camera.Parameters parameters,
-                          int degree,
-                          int targetWidth,
-                          int targetHeight,
-                          int frameSkip,
-                          boolean isBitmapScaleForce) {
-        mContext = surfaceView.getContext();
+    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private Camera.AutoFocusCallback mAutoFocusCallback = new Camera.AutoFocusCallback() {
+        @Override
+        public void onAutoFocus(boolean success, Camera camera) {
+            mHandler.postDelayed(mAutoFocusRunnable, autoFocusInterval);
+        }
+    };
+    private Runnable mAutoFocusRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mCamera.autoFocus(mAutoFocusCallback);
+        }
+    };
+    private CameraManager(Builder builder) {
+        mContext = builder.surfaceView.getContext();
         //yuv2Bitmap = new YUV2Bitmap(mContext);
-        mSurfaceHolder = surfaceView.getHolder();
-        mPreviewRepertory = previewRepertory;
-        this.mParameters = parameters;
+        mSurfaceHolder = builder.surfaceView.getHolder();
+        mPreviewRepertory = builder.previewRepertory;
+        this.mParameters = builder.parameters;
         mSurfaceHolderCB = new CustomSurfaceHolderCallBack();
         mSurfaceHolder.addCallback(mSurfaceHolderCB);
         this.isBitmapScaleForce = isBitmapScaleForce;
-        this.degree = degree;
-        mTargetWidth = targetWidth;
-        mTargetHeight = targetHeight;
-        this.frameSkip = frameSkip;
+        this.degree = builder.degree;
+        mTargetWidth = builder.targetWidth;
+        mTargetHeight = builder.targetHeight;
+        this.frameSkip = builder.frameSkip;
+        this.autoFocusInterval = builder.autoFocusInterval;
 
     }
 
@@ -91,7 +96,6 @@ public class CameraManager {
             }
         });
     }
-
 
     public Bitmap resizeBitmap(
             Bitmap bitmap,
@@ -196,6 +200,8 @@ public class CameraManager {
 //            //设置帧数的
 //            parameters.setPreviewSize(320,240);
         camera.setParameters(parameters);
+
+        //       parameters.setf
 //            //设置获取帧数回调
 
         int size = width * height * 3 / 2;
@@ -241,12 +247,20 @@ public class CameraManager {
                 e.printStackTrace();
             }
             mCamera.startPreview();
+            startAutoFocus();
         }
         isPreviewing = true;
     }
 
-    public void autoFocus() {
-        //mCamera.autoFocus(null);
+    private void startAutoFocus(){
+        if(autoFocusInterval > 0){
+            mCamera.autoFocus(mAutoFocusCallback);
+        }
+    }
+
+    private void stopAutoFocus(){
+        mCamera.autoFocus(null);
+        mHandler.removeCallbacks(mAutoFocusRunnable);
     }
 
     //停止拍照并释放相机资源
@@ -268,11 +282,11 @@ public class CameraManager {
 
     }
 
-
     public void stopPreview() {
         isPreviewing = false;
         if (mCamera != null) {
             mCamera.setPreviewCallback(null);
+            stopAutoFocus();
             mCamera.stopPreview();
         }
     }
@@ -294,6 +308,7 @@ public class CameraManager {
         private int targetWidth = 240;
         private int targetHeight = 320;
         private int frameSkip = 2;
+        private int autoFocusInterval = 5000;
         private boolean isBitmapScaleForce;
         private SurfaceView surfaceView;
         private Camera.Parameters parameters;
@@ -341,22 +356,20 @@ public class CameraManager {
          * @param force 如果目标的宽高和camera输出的宽高不成比例，
          *              true则强制缩放
          *              false则按照最小比例缩放，默认为false
-         * */
-        public Builder BitmapScaleForce(boolean force){
+         */
+        public Builder BitmapScaleForce(boolean force) {
             isBitmapScaleForce = force;
             return this;
         }
 
+        public Builder autoFocusInterval(int interval) {
+            autoFocusInterval = interval;
+            return this;
+        }
+
+
         public CameraManager build() {
-            return new CameraManager(
-                    surfaceView,
-                    previewRepertory,
-                    parameters,
-                    degree,
-                    targetWidth,
-                    targetHeight,
-                    frameSkip,
-                    isBitmapScaleForce);
+            return new CameraManager(this);
         }
     }
 
@@ -401,12 +414,12 @@ public class CameraManager {
                     }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
-                    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
                         Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
                         bitmap = resizeBitmap(bitmap, width, height);
                         Preview preview = new Preview(previewID, bitmap);
                         mPreviewRepertory.addPreview(preview);
-                    }else {
+                    } else {
                         try {
                             YuvImage img = new YuvImage(data, ImageFormat.NV21, width, height, null);
                             ByteArrayOutputStream stream = new ByteArrayOutputStream();
