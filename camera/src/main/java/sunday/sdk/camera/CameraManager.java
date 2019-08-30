@@ -73,12 +73,13 @@ public class CameraManager {
         this.mParameters = builder.parameters;
         mSurfaceHolderCB = new CustomSurfaceHolderCallBack();
         mSurfaceHolder.addCallback(mSurfaceHolderCB);
-        this.isBitmapScaleForce = isBitmapScaleForce;
-        this.degree = builder.degree;
         mTargetWidth = builder.targetWidth;
         mTargetHeight = builder.targetHeight;
+        this.isBitmapScaleForce = builder.isBitmapScaleForce;
+        this.degree = builder.degree;
         this.frameSkip = builder.frameSkip;
         this.autoFocusInterval = builder.autoFocusInterval;
+        this.isCameraFront = builder.isCameraFront;
 
     }
 
@@ -213,16 +214,13 @@ public class CameraManager {
     }
 
     public synchronized void openCamera() {
-        int num = Camera.getNumberOfCameras();
-        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-        int targetId = Camera.CameraInfo.CAMERA_FACING_BACK;
-        for (int i = 0; i < num; i++) {
-            Camera.getCameraInfo(i, cameraInfo);
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                targetId = Camera.CameraInfo.CAMERA_FACING_FRONT;
-                isCameraFront = true;
-            }
+//        int num = Camera.getNumberOfCameras();
+//        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        int targetId =  Camera.CameraInfo.CAMERA_FACING_BACK;
+        if(isCameraFront) {
+             targetId = Camera.CameraInfo.CAMERA_FACING_FRONT;
         }
+
         initCamera(targetId);
 
     }
@@ -310,6 +308,7 @@ public class CameraManager {
         private int frameSkip = 2;
         private int autoFocusInterval = 5000;
         private boolean isBitmapScaleForce;
+        private boolean isCameraFront = true;
         private SurfaceView surfaceView;
         private Camera.Parameters parameters;
         private PreviewRepertory previewRepertory;
@@ -357,11 +356,19 @@ public class CameraManager {
          *              true则强制缩放
          *              false则按照最小比例缩放，默认为false
          */
-        public Builder BitmapScaleForce(boolean force) {
+        public Builder bitmapScaleForce(boolean force) {
             isBitmapScaleForce = force;
             return this;
         }
 
+        public Builder cameraFront(boolean isFront){
+            isCameraFront = isFront;
+            return this;
+        }
+
+        /**
+         * @param interval 循环自动对焦时间间隔
+         */
         public Builder autoFocusInterval(int interval) {
             autoFocusInterval = interval;
             return this;

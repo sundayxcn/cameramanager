@@ -51,7 +51,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
             Manifest.permission.READ_EXTERNAL_STORAGE,
     };
 
-    private SurfaceView mSurfaceView;
+    protected SurfaceView mSurfaceView;
     private TextView mAlbumView;
     private TextView mCancelView;
     private ImageView mTakePicView;
@@ -245,7 +245,7 @@ public abstract class CameraUIActivity extends FragmentActivity {
         }
     }
 
-    private CameraManager generatorCameraManager(){
+    protected CameraManager generatorCameraManager(){
         return new CameraManager.Builder(mSurfaceView, previewRepertory).
                 targetWidthHeight(mTargetSize.getWidth(), mTargetSize.getHeight()).
                 build();
