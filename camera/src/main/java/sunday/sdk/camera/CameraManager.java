@@ -4,11 +4,14 @@ package sunday.sdk.camera;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.PaintFlagsDrawFilter;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -16,10 +19,10 @@ import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.support.annotation.NonNull;
 import android.util.Log;
-import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -33,6 +36,7 @@ public class CameraManager {
     public static final String TAG = "CameraManager";
     private final int frameSkip;
     private final int degree;
+    private int autoFocusInterval = 5000;
     private Camera mCamera;
     private boolean isCameraFront;
     private SurfaceHolder mSurfaceHolder;
@@ -48,27 +52,34 @@ public class CameraManager {
     private boolean isPreviewing;
     private PictureBitmapCallback mPictureBitmapCallback;
     private boolean isBitmapScaleForce;
-
-    private CameraManager(@NonNull SurfaceView surfaceView,
-                          PreviewRepertory previewRepertory,
-                          Camera.Parameters parameters,
-                          int degree,
-                          int targetWidth,
-                          int targetHeight,
-                          int frameSkip,
-                          boolean isBitmapScaleForce) {
-        mContext = surfaceView.getContext();
-        yuv2Bitmap = new YUV2Bitmap(mContext);
-        mSurfaceHolder = surfaceView.getHolder();
-        mPreviewRepertory = previewRepertory;
-        this.mParameters = parameters;
+    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private Camera.AutoFocusCallback mAutoFocusCallback = new Camera.AutoFocusCallback() {
+        @Override
+        public void onAutoFocus(boolean success, Camera camera) {
+            mHandler.postDelayed(mAutoFocusRunnable, autoFocusInterval);
+        }
+    };
+    private Runnable mAutoFocusRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mCamera.autoFocus(mAutoFocusCallback);
+        }
+    };
+    private CameraManager(Builder builder) {
+        mContext = builder.surfaceView.getContext();
+        //yuv2Bitmap = new YUV2Bitmap(mContext);
+        mSurfaceHolder = builder.surfaceView.getHolder();
+        mPreviewRepertory = builder.previewRepertory;
+        this.mParameters = builder.parameters;
         mSurfaceHolderCB = new CustomSurfaceHolderCallBack();
         mSurfaceHolder.addCallback(mSurfaceHolderCB);
-        this.isBitmapScaleForce = isBitmapScaleForce;
-        this.degree = degree;
-        mTargetWidth = targetWidth;
-        mTargetHeight = targetHeight;
-        this.frameSkip = frameSkip;
+        mTargetWidth = builder.targetWidth;
+        mTargetHeight = builder.targetHeight;
+        this.isBitmapScaleForce = builder.isBitmapScaleForce;
+        this.degree = builder.degree;
+        this.frameSkip = builder.frameSkip;
+        this.autoFocusInterval = builder.autoFocusInterval;
+        this.isCameraFront = builder.isCameraFront;
 
     }
 
@@ -86,7 +97,6 @@ public class CameraManager {
             }
         });
     }
-
 
     public Bitmap resizeBitmap(
             Bitmap bitmap,
@@ -191,25 +201,26 @@ public class CameraManager {
 //            //设置帧数的
 //            parameters.setPreviewSize(320,240);
         camera.setParameters(parameters);
+
+        //       parameters.setf
 //            //设置获取帧数回调
 
         int size = width * height * 3 / 2;
         camera.addCallbackBuffer(new byte[size]);
         camera.setPreviewCallbackWithBuffer(mCustomPreviewCB);
         camera.setPreviewCallback(mCustomPreviewCB);
+
+        yuv2Bitmap = new YUV2Bitmap(mContext);
     }
 
     public synchronized void openCamera() {
-        int num = Camera.getNumberOfCameras();
-        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-        int targetId = Camera.CameraInfo.CAMERA_FACING_BACK;
-        for (int i = 0; i < num; i++) {
-            Camera.getCameraInfo(i, cameraInfo);
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                targetId = Camera.CameraInfo.CAMERA_FACING_FRONT;
-                isCameraFront = true;
-            }
+//        int num = Camera.getNumberOfCameras();
+//        Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+        int targetId =  Camera.CameraInfo.CAMERA_FACING_BACK;
+        if(isCameraFront) {
+             targetId = Camera.CameraInfo.CAMERA_FACING_FRONT;
         }
+
         initCamera(targetId);
 
     }
@@ -227,19 +238,27 @@ public class CameraManager {
 
     public void startPreview() {
         if (!isPreviewing && mCamera != null) {
+            mCamera.setPreviewCallback(mCustomPreviewCB);
             try {
                 mCamera.setPreviewDisplay(mSurfaceHolder);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            mCamera.setPreviewCallback(mCustomPreviewCB);
             mCamera.startPreview();
+            startAutoFocus();
         }
         isPreviewing = true;
     }
 
-    public void autoFocus() {
-        //mCamera.autoFocus(null);
+    private void startAutoFocus(){
+        if(autoFocusInterval > 0){
+            mCamera.autoFocus(mAutoFocusCallback);
+        }
+    }
+
+    private void stopAutoFocus(){
+        mCamera.autoFocus(null);
+        mHandler.removeCallbacks(mAutoFocusRunnable);
     }
 
     //停止拍照并释放相机资源
@@ -254,15 +273,18 @@ public class CameraManager {
             //释放相机资源
             mCamera.release();
             mCamera = null;
+
+            yuv2Bitmap = null;
+
         }
 
     }
 
-
-    private void stopPreview() {
+    public void stopPreview() {
         isPreviewing = false;
         if (mCamera != null) {
             mCamera.setPreviewCallback(null);
+            stopAutoFocus();
             mCamera.stopPreview();
         }
     }
@@ -284,7 +306,9 @@ public class CameraManager {
         private int targetWidth = 240;
         private int targetHeight = 320;
         private int frameSkip = 2;
+        private int autoFocusInterval = 5000;
         private boolean isBitmapScaleForce;
+        private boolean isCameraFront = true;
         private SurfaceView surfaceView;
         private Camera.Parameters parameters;
         private PreviewRepertory previewRepertory;
@@ -331,22 +355,28 @@ public class CameraManager {
          * @param force 如果目标的宽高和camera输出的宽高不成比例，
          *              true则强制缩放
          *              false则按照最小比例缩放，默认为false
-         * */
-        public Builder BitmapScaleForce(boolean force){
+         */
+        public Builder bitmapScaleForce(boolean force) {
             isBitmapScaleForce = force;
             return this;
         }
 
+        public Builder cameraFront(boolean isFront){
+            isCameraFront = isFront;
+            return this;
+        }
+
+        /**
+         * @param interval 循环自动对焦时间间隔
+         */
+        public Builder autoFocusInterval(int interval) {
+            autoFocusInterval = interval;
+            return this;
+        }
+
+
         public CameraManager build() {
-            return new CameraManager(
-                    surfaceView,
-                    previewRepertory,
-                    parameters,
-                    degree,
-                    targetWidth,
-                    targetHeight,
-                    frameSkip,
-                    isBitmapScaleForce);
+            return new CameraManager(this);
         }
     }
 
@@ -361,6 +391,7 @@ public class CameraManager {
             renderScript = RenderScript.create(context);
             scriptIntrinsicYuvToRGB = ScriptIntrinsicYuvToRGB.create(renderScript, Element.U8_4(renderScript));
         }
+
 
         public Bitmap nv21ToBitmap(byte[] nv21, int width, int height) {
             if (yuvType == null) {
@@ -390,10 +421,27 @@ public class CameraManager {
                     }
                     int width = camera.getParameters().getPreviewSize().width;
                     int height = camera.getParameters().getPreviewSize().height;
-                    Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
-                    bitmap = resizeBitmap(bitmap, width, height);
-                    Preview preview = new Preview(previewID, bitmap);
-                    mPreviewRepertory.addPreview(preview);
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+                        Bitmap bitmap = yuv2Bitmap.nv21ToBitmap(data, width, height);
+                        bitmap = resizeBitmap(bitmap, width, height);
+                        Preview preview = new Preview(previewID, bitmap);
+                        mPreviewRepertory.addPreview(preview);
+                    } else {
+                        try {
+                            YuvImage img = new YuvImage(data, ImageFormat.NV21, width, height, null);
+                            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            img.compressToJpeg(new Rect(0, 0, width, height), 100, stream);
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
+                            bitmap = resizeBitmap(bitmap, width, height);
+                            stream.close();
+                            Preview preview = new Preview(previewID, bitmap);
+                            mPreviewRepertory.addPreview(preview);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+
                 }
             }
         }
